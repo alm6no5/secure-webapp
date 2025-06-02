@@ -15,34 +15,32 @@ const { authenticateToken, authorizeRoles } = require('./middleware/auth');
 
 const app = express();
 
-// أمان HTTP headers
+
 app.use(helmet());
 
-// السماح بالطلبات من الواجهة الأمامية (React) مع تمكين الكوكيز (credentials)
+
 app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
 
 app.use(express.json());
 app.use(cookieParser());
 
-// تحديد معدل الطلبات لمنع هجمات brute force
+
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 دقيقة
-  max: 100, // 100 طلب لكل IP خلال الـ 15 دقيقة
+  windowMs: 15 * 60 * 1000, 
+  max: 100, 
   message: 'Too many requests, please try again later.'
 });
 app.use(limiter);
 
-// الاتصال بقاعدة البيانات MongoDB
+
 mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB connection error:', err));
 
-// API لتسجيل مستخدم جديد
 app.post('/api/register', async (req, res) => {
   try {
     let { username, email, password, sensitiveData } = req.body;
 
-    // تنظيف المدخلات
     username = sanitizeInput(username);
     email = sanitizeInput(email);
 
@@ -50,7 +48,6 @@ app.post('/api/register', async (req, res) => {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
-    // التحقق من صحة البريد وكلمة المرور
     if (!isValidEmail(email)) {
       return res.status(400).json({ message: 'Invalid email format' });
     }
@@ -58,19 +55,15 @@ app.post('/api/register', async (req, res) => {
       return res.status(400).json({ message: 'Password does not meet complexity requirements' });
     }
 
-    // التأكد من عدم وجود مستخدم بنفس البريد أو الاسم
     const existingUser = await User.findOne({ $or: [{ username }, { email }] });
     if (existingUser) {
       return res.status(409).json({ message: 'Username or email already exists' });
     }
 
-    // تجزئة كلمة المرور
     const passwordHash = await hashPassword(password);
 
-    // تشفير البيانات الحساسة (اختياري)
     let encryptedData = sensitiveData ? encrypt(sanitizeInput(sensitiveData)) : undefined;
 
-    // إنشاء المستخدم
     const user = new User({
       username,
       email,
@@ -89,7 +82,6 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-// API لتسجيل الدخول
 app.post('/api/login', async (req, res) => {
   try {
     let { email, password } = req.body;
@@ -110,15 +102,13 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // إنشاء JWT مع دور المستخدم وصلاحية لمدة ساعة
     const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
 
-    // إرسال التوكن في كوكي httpOnly لتقليل خطر سرقته
     res.cookie('token', token, {
       httpOnly: true,
-      secure: false, // غير مفعل للـ http، فعّل لو تستخدم https
+      secure: false, 
       sameSite: 'strict',
-      maxAge: 3600000 // 1 ساعة
+      maxAge: 3600000 
     });
 
     res.json({ message: 'Login successful', token });
@@ -129,13 +119,11 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// API لجلب بيانات المستخدم (محمي بتوثيق JWT)
 app.get('/api/profile', authenticateToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-passwordHash');
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // فك التشفير لبيانات حساسة
     let sensitiveData = null;
     if (user.sensitiveDataEncrypted) {
       sensitiveData = decrypt(user.sensitiveDataEncrypted);
@@ -149,13 +137,11 @@ app.get('/api/profile', authenticateToken, async (req, res) => {
   }
 });
 
-// API لتسجيل الخروج (مسح كوكي التوكن)
 app.post('/api/logout', (req, res) => {
   res.clearCookie('token', { httpOnly: true, sameSite: 'strict' });
   res.json({ message: 'Logged out' });
 });
 
-// مثال API محمي يحتاج دور admin (حذف مستخدم)
 app.delete('/api/admin/user/:id', authenticateToken, authorizeRoles('admin'), async (req, res) => {
   try {
     const userId = req.params.id;
