@@ -12,10 +12,8 @@ export default function Login() {
   async function handleSubmit(e) {
     e.preventDefault();
     try {
-      const res = await axios.post('http://localhost:5000/api/login', form, { withCredentials: true });
+      await axios.post('http://localhost:5000/api/login', form, { withCredentials: true });
       setMessage('Login successful');
-      // إذا تحب تعرض رسالة من السيرفر استبدل السطر السابق بـ:
-      // setMessage(res.data.message);
     } catch (err) {
       setMessage(err.response?.data?.message || 'Error');
     }
