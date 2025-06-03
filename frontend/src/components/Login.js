@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 
 export default function Login() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [message, setMessage] = useState('');
-  const navigate = useNavigate();
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -15,8 +13,9 @@ export default function Login() {
     e.preventDefault();
     try {
       const res = await axios.post('http://localhost:5000/api/login', form, { withCredentials: true });
-      setMessage(res.data.message);
-      navigate('/register'); // بعد الدخول نوجه المستخدم لصفحة التسجيل (تقدر تغير لصفحة أخرى)
+      setMessage('Login successful');
+      // إذا تحب تعرض رسالة من السيرفر استبدل السطر السابق بـ:
+      // setMessage(res.data.message);
     } catch (err) {
       setMessage(err.response?.data?.message || 'Error');
     }
