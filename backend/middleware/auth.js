@@ -2,8 +2,7 @@ const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../config');
 
 function authenticateToken(req, res, next) {
-  // استخدم optional chaining بدل التحقق التقليدي
-  const authHeader = req.headers?.authorization || req.cookies?.token;
+  const authHeader = req.headers['authorization'] || req.cookies.token;
   const token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
 
   if (!token) return res.status(401).json({ message: 'Access token required' });
